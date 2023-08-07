@@ -1,0 +1,664 @@
+---
+title: "Lab 7 2023 ESRM 433"
+author: "Anthony Stewart"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+<style type="text/css">
+.html-widget {
+    margin: auto;
+}
+
+h1.title {
+  font-size: 38px;
+  text-align: center;
+}
+</style>
+
+```{css, echo=FALSE}
+pre {
+  max-height: 250px;
+  overflow-y: auto;
+}
+```
+
+```{r echo=FALSE}
+colorize <- function(x, color) {
+  if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{%s}", color, x)
+  } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'>%s</span>", color,
+      x)
+  } else x
+}
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, out.width = "70%", fig.align = "center")
+knitr::opts_knit$set(root.dir = '/Users/Anthony/OneDrive - UW/University of Washington/Teaching/SEFS433_Lidar/Labs/')
+library(rgl)
+library(terra)
+library(kableExtra)
+library(lidR)
+library(gstat) #optional
+library(sf) #needed for readLAScatalog
+library(mapview) #needed for ploting files on basemaps
+library(BiocManager) #loading BiocManager
+#library(EBImage)#loading EBImage
+library(rgdal) #run if you get an error "rgdal required"
+library(concaveman) #optional
+library(leaflet)
+library(whitebox)
+library(randomForest)
+library(caret)
+knitr::knit_hooks$set(webgl = hook_webgl)
+```
+
+#### Objectives:
+
+- Locate lidar data from another geospatial data portal
+
+- Model wetland presence using lidar DTMs and DTM metrics using Random Forest
+
+- Compare outputs to the national wetland inventory
+
+#### Data and Software:
+
+- Wetlands Data from the National Wetland Inventory
+
+    - https://fwsprimary.wim.usgs.gov/wetlands/apps/wetlands-mapper/
+    
+- Lidar and topography Data from Open Topography and Alaska Division of Geological and Geophysical Surveys
+
+    - https://opentopography.org/
+    - https://elevation.alaska.gov
+
+
+- R Studio
+
+    - WhiteboxTools
+
+- CloudCompare
+
+- ArcGIS Pro
+
+What you will turn in:
+
+[Lab 7 Submission Quiz](https://canvas.uw.edu/courses/1633883/quizzes/1858929)
+
+---
+
+### Welcome to Lab 7 for ESRM433/SEFS533!
+
+In this lab we are going to be expanding on modeling with lidar. In particular we're going to attempt to model wetlands across a landscape covered by our lidar data. This kind of modeling will use
+
+- Input data from the National Wetland Inventory
+
+- Terrain metrics and lidar intensity as covariate predictors for wetland presence
+
+- A Random Forest algorithm for the prediction. 
+
+This might be a big leap from linear regression but we'll step through this lab exercise and think of things more conceptually.
+
+For this lab we are also heading north outside of Washington and into Southeast Alaska which is home to the Tongass Rainforest.
+
+<center>
+![](images/Fog on Eagle River 2.jpeg)
+</center>
+
+The Tongass Rainforest and Tongass National Forest is the largest U.S. National Forest and worlds largest temperate rainforest at 17 million acres. The overall climate is perhumid or basically the wettest with nearly 200in per year on average and mean annual temperature between 39-54^o^F. With this climate, the forest is dominated by Sitka Spruce, Western Hemlock, and some Yellow Cedar. It is also home to brown bears, black bears, wolves, deer, and salmon. (https://en.wikipedia.org/wiki/Tongass_National_Forest)
+
+The Tongass has been since time immemorial and still is home to Tlingit and Haida indigenous people who have been stewards of the land until Russian, European, and American settlement. (https://en.wikipedia.org/wiki/Tlingit)
+
+<center>
+![](images/Troy12_2020-2.jpg)
+</center>
+
+
+As you may have guessed, this climate leads to the formation of many wetlands and peatlands. These wetlands and peatlands are especially critical to conserve because they store a lot of carbon and keep it from entering the atmosphere
+https://iopscience.iop.org/article/10.1088/1748-9326/aaed52
+
+<center>
+![A Soil Carbon Map in Southeast Alaska McNicol et al., 2019](images/mcnicol_SOC.jpg){width=50%}
+</center>
+
+
+
+### Part 1: Introduction to Scenario
+
+**Scenario:** There is a small city-owned ski area in Juneau, Alaska that is looking to expand some of their skiing terrain and add a new ski lift. [This is actually happening](https://www.ktoo.org/2023/04/25/under-new-agreement-juneau-would-have-until-2028-to-open-eaglecrest-gondola/)
+
+But, the ski area sits on land that is covered by wetlands and peatlands due to the soggy and cool climate of the Tongass Rainforest
+
+<center>
+![Wetlands on Eaglecrest](images/EC_wet.jpg){width=70%}
+</center>
+
+The city wants to limit the disturbance of wetlands but when consulting National Wetland Inventory (NWI) maps of the area, there are many that appear to be missing or poorly mapped. 
+
+<center>
+![](images/Screenshot 2023-05-07 at 1.40.30 PM.png){width=60%}
+</center>
+
+Furthermore, many of the wetlands are forested and cannot be seen with aerial imagery, posing a challenge for the city to identify them.
+
+<span style="color:darkgreen">**The city is asking you, a lidar mapping consultant, if you can help them with a better map of wetlands in the area.**</span>
+
+The ski area was more or less recently mapped with lidar in 2013 and could provide the necessary detail to map these wetlands. You will need to download and analyze the data and use the NWI as reference to build a new wetland map.
+
+---
+\newpage
+
+### Part 2: Where is our lidar data?
+
+This should be sort of familiar by now, but gathering data is sometimes the most difficult part of the job. [Thankfully as a start the Alaska Department of Natural Resources Division of Geological & Geophysical Surveys maintains a data portal similar to the Washington Lidar Portal.](https://elevation.alaska.gov/)
+
+**`r colorize("QUESTION 1: Check out some of the other data available in this database. Name 3 other lidar projects/acquisitions in Southeast Alaska",  "red")`**
+
+Turn off all the data to see better and navigate to Juneau, Alaska. 
+
+![It's north of Seatle](images/Screenshot 2023-05-07 at 1.58.08 PM.png)
+
+Turn on the Juneau 2013 Boundary and/or DTM Hillshade. These are visualization tools to get data. We're looking for this small block within the total acquisition.
+
+![](images/Image 5-7-23 at 1.56 PM.jpeg)
+
+Zoom in a bit and use the box tool in the upper right to delineate the area to download data from. Then select the Juneau 2013 All Points (laz point cloud files), DTM, and Metadata
+
+![](images/ec_datadownload.png)
+
+It's sort of a big file with 714Mbs but half of that is the DTM. To speed up time downloading we can remove the DTM as well. I am hoping Madrona is OK with this...
+
+
+Once the files are downloaded and extracted from the .zip folders, you can check out the metadata. 
+
+<span style="color:red"> **QUESTION 2: What was the point density of the first returns in P1 pts/m^2^ compared to ground returns in P1 pts/m^2^?**</span>
+
+<span style="color:red"> **QUESTION 3: In Table 8, what is the classification number for Ground Points, Water, and Ice?**</span>
+
+Also look in the laz folder, there are a lot of .laz files!
+
+
+### Part 4: Creating a DTM 
+
+So the data did come with a lidar derived DTM but we're going to go through and create our own with a slightly lower resolution to save space.
+
+Remember we can use R and the `lidR` package to generate DTMs
+
+Let's open up RStudio and load our libraries 
+
+```{r eval=FALSE}
+library(lidR)
+library(terra) #for rasters and spatrasters
+library(sf) #needed for readLAScatalog
+library(mapview)
+```
+
+
+We can now use the `readLAScatalog` function to "read" our `.laz` data. Note, this is the efficient way to read data since it does not do so completely. We can also set the chunk size setting the `opt_chunk_size` to something smaller than our tile size and `opt_output_files` to write files out of R and process things more efficiently
+
+
+Check out `?readLAScatalog` again and the `LAScatalog-engine` for details. https://cran.r-project.org/web/packages/lidR/vignettes/lidR-LAScatalog-engine.html 
+
+
+**`r colorize("QUESTION 4: Read the above lidR LAScatalog-engine link. What are the roles of the catalog engine? Copy/Paste is fine but list one of the roles that is the most confusing for you",  "red")`**
+
+<!-- - Examples of other attribute abbreviations are: `t` gpstime, `a` - scan angle, `n` - number of returns, `r` - return number, `c` - classification, `s` - synthetic flag, `k` - keypoint flag, `w `- withheld flag, `o` - overlap flag (format 6+), `u` - user data, `p` - point source ID, `e` - edge of flight line flag, `d` - direction of scan flag -->
+
+```{r}
+ctg <- readLAScatalog("Lab 7/Lab72023/data/dds4/juneau_2013_usgs/point_cloud_data/")
+    #check the units for meters
+
+plot(ctg, mapview = T)
+```
+
+We're also going to do some filtering to get rid small tiles with less than 2,111,716 points. This leaves us with some nice squares to work with and lessens the data processing strain
+
+```{r}
+ctg <- ctg[ctg$Number.of.point.records > 2111716]
+
+plot(ctg, mapview = T)
+```
+
+
+I'm going to grab the shapefile of the lidar catalog footprint here
+```{r eval=FALSE}
+rgdal::writeOGR(as.spatial(ctg), "data/","las_footprint", driver="ESRI Shapefile")
+plot(vect("data/las_footprint.shp"), type = "polygons")
+```
+
+
+Here we're going to set our `LAScatalog` options for processing
+
+- `opt_chunk_size` this is the size of the chunks that are processed sequentially. Smaller chunks can be more efficient. But I tried this and for some reason it didn't like it on my computer
+
+- `opt_select`: this is the selection of attributes. I chose `z` for height, `i` for intensity, and `c` for classification to lessen some of the processing but there are more:
+    
+    - Examples of other attribute abbreviations are: `t` gpstime, `a` - scan angle, `n` - number of returns, `r` - return number, `c` - classification, `s` - synthetic flag, `k` - keypoint flag, `w `- withheld flag, `o` - overlap flag (format 6+), `u` - user data, `p` - point source ID, `e` - edge of flight line flag, `d` - direction of scan flag
+    
+- `opt_laz_compression`: This sets the file output to .`laz` which is the compressed version of `.las`
+
+- `opt_progress` this shows our progress in the map
+
+All of this is set for our processing of our catalog file `ctg`
+    
+```{r}
+opt_chunk_size(ctg) <- 0 #the chunk size. 0 means the entire tile. 
+
+opt_select(ctg) <- "zic"
+
+opt_output_files(ctg) <- opt_output_files(ctg) <- "Lab 7/Lab72023/data/dds4/juneau_2013_usgs/point_cloud_data/written_chunks/{ORIGINALFILENAME}_dtm"
+
+opt_laz_compression(ctg) <- TRUE #we want output as laz vs las
+
+opt_progress(ctg) <- TRUE
+
+```
+
+optional: I just wanted to overwrite the files I made from these functions 
+```{r}
+ctg@output_options$drivers$SpatRaster$param$overwrite <- TRUE
+
+```
+
+Let's create our DTM. <font size="6"> **This will take a while!** </font> So I would encourage you to write the file to your lab folder and save it in a safe place once it's done. Then you should never have to do this again.
+```{r eval = F}
+dtm <- rasterize_terrain(ctg, 5, tin(), pkg = "terra")
+writeRaster(dtm, "Lab 7/Lab72023/newlidardtm.tif", overwrite = T)
+```
+
+
+
+When it finishes you should have something like this! 
+``` {r}
+dtm <- rast("Lab 7/Lab72023/newlidardtm.tif")
+plot(dtm)
+```
+
+We can also grab the intensity values while we're at it but we need to specify the function to get mean Intensity. <font size="4">**This also could take a while**</font> so write out and save for easy future use.
+```{r eval=FALSE}
+m <- ~list(avgI = mean(Intensity))
+
+intensity_raster <- pixel_metrics(ctg, m, res = 5)
+writeRaster(intensity_raster, filename = "Lab 7/Lab72023/intensity_raster.tif")
+```
+
+et voila!
+```{r}
+intensity_raster <- rast("Lab 7/Lab72023/intensity_raster.tif")
+plot(intensity_raster,  main = "Lidar Intensity")
+```
+
+<span style="color:red">**"QUESTION 5: Take a screenshot of your DTM but with a different color scheme. You and do this with the `plot()` function and setting col = `c('red', "blue', 'purple')` or some other combination**</span>
+
+
+### Part 5: DTM Metrics 
+
+Now that we have our DTM we're going to calculate some metrics that refer to topography. The reason we focus on topography is so that we can see beneath the canopy at what is going on on the ground. 
+
+Check out this collaborator paper on hidden wetlands: https://egusphere.copernicus.org/preprints/2022/egusphere-2022-665/
+
+**`r colorize("QUESTION 6: From the paper what is the tool used to identify wetlands called? Name one of the terrain variables used in the model. Hint: look at one of the figures ",  "red")`**
+
+To create metrics we need some additional help from GIS interfacing packages. One of those is `whitebox`from Whitebox Geospatial Inc. They have a great manual for a bunch of tools related to terrain analysis 
+
+https://www.whiteboxgeo.com/manual/wbt_book/intro.html
+
+and a complete list of tools in R specifically are listed here:
+
+https://whiteboxr.gishub.org/reference/index.html
+
+Download and install `whitebox`
+```{r eval = F}
+install.packages("whitebox")
+whitebox::install_whitebox() #NEED TO DO AND MAKE SURE IT WORKS
+library(whitebox)
+```
+
+
+Check out the lidar tools
+```{r}
+print(wbt_list_tools("lidar"))
+```
+Or tool parameters
+```{r}
+print(wbt_tool_parameters("slope"))
+```
+
+One thing that is a bit weird with `whitebox` is that the functions require **a file path** but not a variable. So the file path in quotes should go to the file and the output should also be a filepath with a file name.
+
+Here's an example using the `wbt_mean_curvature`
+```{r eval=FALSE}
+wbt_mean_curvature(
+  dem = "Lab 7/Lab72023/newlidardtm.tif", #file path not variable
+  output = "Lab 7/Lab72023/mean_curv.tif")
+```
+
+Now we can open the `mean_curv.tif` using the `rast` function from the `terra` package and plot it
+```{r}
+plot(rast("Lab 7/Lab72023/mean_curv.tif"))
+```
+
+You are now going to build many terrain derivatives from your new `dtm` that correspond to potential wetlands. We're kind of going to follow a couple sources that have done something similar:
+
+- [The Wetland Intrinsic Potential tool: Mapping wetland intrinsic potential through machine learning of multi-scale remote sensing proxies of wetland indicators ](https://egusphere.copernicus.org/preprints/2022/egusphere-2022-665/)
+
+- [Predicting Palustrine Wetland Probability Using Random Forest Machine Learning and Digital Elevation Data-Derived Terrain Variables](https://doi.org/10.14358/PERS.82.6.437)
+
+
+We can use a few of the important variables from these sources for our wetland mapping particularly: **slope**, **curvature**, **topographic wetness index**, and **topographic position index**
+
+<span style="color:red">**"QUESTION 7: From the whitebox tools manual find Wetness Index under the Geomorphometric Section and find its equation. Notice it takes 2 paramters "As" and "Slope". What is the As? https://www.whiteboxgeo.com/manual/wbt_book/intro.html **</span>
+
+
+```{r eval=FALSE}
+wbt_slope(
+    dem = "Lab 7/Lab72023/newlidardtm.tif",
+    output = "Lab 7/Lab72023/slope.tif"
+)
+
+wbt_total_curvature(
+    dem = "Lab 7/Lab72023/newlidardtm.tif",
+    output = "Lab 7/Lab72023/totalcurve.tif"
+)
+
+wbt_relative_topographic_position(
+    dem = "Lab 7/Lab72023/newlidardtm.tif", 
+    output = "Lab 7/Lab72023/rTPI.tif", 
+    filterx = 5, filtery = 5
+)
+
+wbt_dev_from_mean_elev(
+    dem = "Lab 7/Lab72023/newlidardtm.tif",
+    output = "Lab 7/Lab72023/DEV.tif",
+    filterx = 11, filtery = 11
+)
+```
+
+In order to get `topographic wetness index` or just `wetness index` in whitebox we need to calculate **specific contributing area (SCA)** or in `whitebox`: `flow accumulation` which needs a hydrologically condition DTM where there are flow paths down the entire area. Usually this means we fill depressions in a DTM but we can use a breach depressions method that is a lower impact. This is described here:
+
+- [*The approach uses a least-cost path analysis to identify the breach channel that connects pit cells (i.e. grid cells for which there is no lower neighbour) to some distant lower cell. Prior to breaching and in order to minimize the depth of breach channels, all pit cells are rised to the elevation of the lowest neighbour minus a small heigh value. Here, the cost of a breach path is determined by the amount of elevation lowering needed to cut the breach channel through the surrounding topography.*](https://www.whiteboxgeo.com/manual/wbt_book/available_tools/hydrological_analysis.html#breachdepressionsleastcost)
+```{r eval=FALSE}
+wbt_breach_depressions_least_cost(
+    dem = "Lab 7/Lab72023/newlidardtm.tif",
+    output = "Lab 7/Lab72023/newlidardtm_breach.tif",
+    dist = 10
+)
+
+wbt_d_inf_flow_accumulation(
+    input = "Lab 7/Lab72023/newlidardtm_breach.tif",
+    output = "Lab 7/Lab72023/d_inf_sca.tif",
+    log = F
+)
+```
+```{r}
+plot(log(rast("Lab 7/Lab72023/d_inf_sca.tif")), main = "Log Transformed SCA/FlowAccumulation")
+```
+
+Now let's calculate topographic wetness index
+
+```{r eval=FALSE}
+wbt_wetness_index(
+    sca = "Lab 7/Lab72023/d_inf_sca.tif",
+    slope = "Lab 7/Lab72023/slope.tif", 
+    output = "Lab 7/Lab72023/TWI.tif"
+)
+```
+
+```{r}
+plot(rast("Lab 7/Lab72023/TWI.tif"), main = "Topographic Wetness Index")
+```
+
+
+Now we have a bunch of metrics calculated from our lidar DTM. In the paper examples there were many more metrics being used but for this lab we will use just a few. Next, we need to set up a wetland prediction analysis.
+
+
+### Part 6: Wetland Prediction with Random Forest and the National Wetland Inventory
+
+
+Random Forest is probably something you've heard about but if not, this will be a short overview of it, but not comprehensive. There are many resources to check out for this but here are a couple:
+
+- [An Introduction to Random Forest](https://towardsdatascience.com/random-forest-3a55c3aca46d)
+
+- [StatQuest is a super good resource on Youtube as well](https://www.youtube.com/watch?v=6EXPYzbfLCE)
+
+
+Think of your data randomly split up and walking on a trail in the woods then making certain decisions at trail forks. Those decisions on which way to go for at each trail fork will end up at certain locations. In this case the locations are classifications. 
+
+[A Random Forest consists of multiple random decision/classification trees. Two types of randomnesses are built into the trees. First, each tree is built on a random sample from the original data. Second, at each tree node, a subset of features are randomly selected to generate the best split.](https://towardsdatascience.com/random-forest-3a55c3aca46d)
+
+Basically we start with a dataset that has our lidar attributes and known classifications. We call this dataset **training data**. We build additional small sets of data by randomly sampling our **training data** in a process called **bagging**. Each "bag" is then run through a decision/classification tree whose branches are split based on randomly selected variables from our dataset. The result of each decision/classification tree is a **classification** and the final part of the Random Forest is taking a majority vote from all trees on what is the best classification.
+
+![An Example Dataset](images/dataset_ex.jpeg){width=50%}
+
+![An example tree built from dataset](images/treebuilding.png)
+
+![*A brief view of Random Forest with multiple decision trees*](images/random-forest-diagram.svg)
+
+This is a super simplified explanation so take it with a grain of salt. But Random Forest is used in many remote sensing and lidar applications so getting introduced to it is really important. For this lab we essentially want to use our lidar data in a classification scheme and Random Forest is one of the best tools
+
+##### We want to know whether a pixel in our study area is a wetland or not
+
+
+Let's start with loading the libraries we need:
+```{r eval=FALSE}
+install.packages("randomForest")
+install.packages("caret")
+
+library(randomForest)
+#library(caret)
+```
+
+We also need some training data that tells us where known wetland locations are. We are fortunate that in the U.S. we have a great start with the National Wetland Inventory that can provide us with training data. 
+
+[Check out the National Wetland Inventory Wetland Mapper and find our study area near Juneau Alaska](https://fwsprimary.wim.usgs.gov/wetlands/apps/wetlands-mapper/)
+
+<center>
+![](images/NWI_Juneau.png){width=70%}
+![](images/NWI_EC.png){width=60%}
+
+
+</center>
+
+**`r colorize("QUESTION 8: If we look at some of the NWI wetlands in our area, what is the most common habitat classification type? Also find one wetland and provide the classification code then describe it. It should look like PEM1/SS1B. Hint: click on the description tab in the popup window", "red")`**
+
+
+**`r colorize("QUESTION 9: Take a screenshot of the NWI mapper with an area that might be a wetland but is not covered by an NWI polygon. Why do you think that is area is a wetland? i.e. describe visual cues. No wrong answers really I just want to look at the data", "red")`**
+
+
+So this is great to have the NWI but how do we get training data from this? Well, it's a bit complicated. You can do this by:
+
+1. Downloading the data from the NWI in polygon format 
+
+2. Clipping the polygons to the study area
+
+3. Generating a stratified sample of points within the polygons and outside of the polygons
+
+4. Labeling points within NWI wetlands as "wetlands" and points outside of the NWI as "uplands"
+
+5. Exporting the points for extracting lidar metrics.
+
+Because this is a Lidar class, we are going to ask out "coworker" to provide this data for us. Luckily this coworker has done this before an has created a beautiful training dataset that we should be thankful for. They even took care of some errors with the NWI and fixed points that were wrong `r emo::ji("sunglasses")`
+
+But one of the things you should be aware of is how to get data from different sources, one of which is spreadsheets in .csv form which we have done a bit before. But below this code below:
+
+1. Opens a .csv file that contains our NWI wetland/upland points
+
+2. csv spreadsheets don't have a projection and this one was made in a different projection. So we need to import it using `terra::vect` and specifying the crs that our "coworker" made the training data in. 
+
+3. We need to then project our data into the crs that we use which is `"EPSG:26908"`
+
+```{r}
+NWI_training_csv <- read.csv("Lab 7/Lab72023/NWI/AK_douglas_wetlands_pts_studyarea_att.csv")
+NWI_training_pts <- terra::vect(NWI_training_csv, geom = c("X", "Y"), crs="EPSG:3338")
+NWI_training_pts_prj <- terra::project(NWI_training_pts, "EPSG:26908")
+
+```
+
+Now we're going to bring in the NWI wetlands, the las footprint, the dtm, and the training points, put them all in the same projection and map them
+```{r}
+
+NWI_wetlands <- terra::vect("Lab 7/Lab72023/NWI/AK_douglas_wetlands_studyarea.gpkg") # import wetland polygons
+NWI_wetlands_prj <- terra::project(NWI_wetlands, "EPSG:26908") # reproject the wetlands into our las projectedion
+
+las_footprint <- terra::vect("Lab 7/Lab72023/data/las_footprint.shp") # import the las footprint polygons
+
+NWI_wetlands_mask <- terra::mask(NWI_wetlands_prj, las_footprint) # mask or clip the polygons to the las footprint
+
+
+plot(dtm) # plot the dtm 
+plot(NWI_wetlands_mask, type = "polygons", add = T) # add the wetland polygons 
+plot(NWI_training_pts_prj, "class", col = c("red", "blue"), cex = 0.5, type= "classes", add = T) # add the NWI training points
+
+```
+
+
+Now we have our training dataset and we can extract the lidar metrics.
+
+First we need to build a raster stack, basically layer all our lidar metrics on top of one another. To make this easy to read we can import all of our `whitebox` metrics into R as variables
+
+Don't forget we can also add in our  **lidar intensity** too!
+
+```{r}
+slope <- rast("Lab 7/Lab72023/slope.tif")
+tot_curve <- rast("Lab 7/Lab72023/totalcurve.tif")
+mean_curve <- rast("Lab 7/Lab72023/mean_curv.tif")
+topo_position <- rast("Lab 7/Lab72023/rTPI.tif")
+sca_flowacc <- rast("Lab 7/Lab72023/d_inf_sca.tif") # let's log transform this one because it big - see below
+dev <- rast("Lab 7/Lab72023/DEV.tif")
+twi <- rast("Lab 7/Lab72023/TWI.tif")
+
+
+stack <- c(slope, (tot_curve), mean_curve, topo_position, log(sca_flowacc),dev, twi, intensity_raster)
+plot(stack)
+```
+
+Ok we're stacked and ready to extract these metrics using our wetland upland point data
+
+```{r}
+?terra::extract
+
+pts_extract <- terra::extract(stack, NWI_training_pts_prj, method = "bilinear", bind = T)
+pts_extract <- as.data.frame(pts_extract)
+
+#remove any rows that contain NA
+pts_extract <- pts_extract[complete.cases(pts_extract),]
+
+#Just some extra styling code for the table
+kable(pts_extract, "html") %>% kable_styling("striped") %>% scroll_box(width = "100%", height = "200px")
+
+```
+
+
+Finally, we can set up our Random Forest like we meant to with those libraries. Because Random Forest is random we are going to use `set.seed` to specify a specific kind of random so we can get repeatable results
+
+Next we use the `randomForest` function. Be sure to check out `?randomForest`. We need to set our parameters within the function correctly
+
+1. `y`: our dependent variable, which is `class` or wetland/upland
+    
+    - Note, I used `pts_extract[,3] here to subset the `pts_extract` dataframe. This code says [take all rows, but only column 3] 
+    - I also specified it as a factor to make sure we do a classification
+
+2. `x`: our predictors/covariates/independent variables, which is our lidar metrics 
+
+    - This code is similar to `y` but says [take all rows, but only columns 4 to 10] for 7 predictor variables
+
+3. `ntree` the number of trees to grow in our forest
+
+4. `importance` for assessing the predictors/covariates/independent variables
+
+5. `confusion` for a confusion matrix related to the classification evaluation
+
+```{r}
+set.seed(42)
+
+rf_model <- randomForest(y = as.factor(pts_extract[,3]), x = pts_extract[,4:10], ntree = 300, importance = TRUE, confusion = TRUE)
+
+rf_model
+```
+
+Wooh! Ok so what did we get? 
+
+Looking at the output above, we have a Random Forest classification model with an OOB error of 14.41% WHat? 
+
+- OOB error is Out of Bag error, it's basically data was randomly left out of the Random Forest algorithm and seeing how accurate our model is 1-OOB is the sort of the overall accuracy or 83.75%. But Random Forest is not super straight forward. We can go into more depth here: https://towardsdatascience.com/what-is-out-of-bag-oob-score-in-random-forest-a7fa23d710 but this might be a bit beyond the class material
+
+
+We can see how the OOB error decreases as we add more trees to the Random Forest
+```{r fig.align='center'}
+plot(rf_model)
+```
+But besides the OOB error what else is there. Well we can see a confusion matrix 
+
+```{r}
+rf_model$confusion
+```
+
+This shows the error by class. Although we had a low overall error, we can see that we had a high wetland error of 35% or 65% accuracy, not the best... It looks like $\frac{105}{(105+187)}$ wetland points were classified as uplands. But we did pretty well on uplands ~93% accuracy. 
+
+We can also check out our variable importance plot
+
+```{r fig.align='center'}
+varImpPlot(rf_model)
+```
+Looks like we relied on slope a lot for this model for accurate predictions
+
+**`r colorize("QUESTION 10: Why do you think our wetland accuracy was low? Plot the NWI_training_pts_prj with some of the layers you generated. Do you see any metrics that are helpful or hurt the model? You can use some examples like the code below or bring them into ArcGIS Pro. Take a screenshot of the points overlaid on top of a metric of your choice",  "red")`**
+
+```{r fig.align='center'}
+plot(slope) #METRIC
+plot(NWI_training_pts_prj, "class" , type = "classes", cex = 0.5, add = T)
+```
+
+
+```{r fig.align='center'}
+mapView(sf::st_as_sf(NWI_training_pts_prj), map.types = "Esri.WorldImagery")
+```
+
+
+
+
+- Another thing to recognize about Random Forest is there is usually a validation dataset. This is super important to know because the validation dataset is what is used to actually evaluate our model. It is a set of data held out of the Random Forest algorithm separate from our training dataset so we aren't biasing the results. Even further is having another additional testing dataset outside of both the training and validation datasets. But our *coworker* spent a lot of time just making the training data so we won't be going into those.
+
+
+There are also many, many ways to evaluate Random Forest and make sure your predictions are accurate and unbiased and I would encourage you to learn about them and to take classes that focus on Machine Learning. You should do this before doing *actual* consulting jobs besides this lab
+
+**`r colorize("QUESTION 11: What is one thing about Random Forest that you learned, one thing you are still confused about, and one way you think you could apply random forest to in another hypothetical project?", "red")`**
+
+
+What we can move onto is prediction from our Random Forest model. 
+
+
+Predicting our results to a map is basically taking each pixel in our `stack` and generating a Random Forest prediction based off the model results. 
+
+Each pixel has values that go through the decision tree and come out as either wetland or upland. While we can get just a basic classification like that. We can also get a wetland probability for each pixel which better represents the uncertainty in our model. I use the `index=2` to specify the `WET` class.
+
+```{r cache=TRUE}
+predict(stack, rf_model, type="prob", index=2, na.rm=TRUE, progress="window", overwrite=TRUE, filename="Lab 7/Lab72023/RF_prediction.tif")
+```
+We wrote the prediction to another raster. The result is a raster with 0-1 values in the pixels representing the probability of a Wetland
+
+```{r fig.align='center'}
+RF_prediction <- rast("Lab 7/Lab72023/RF_prediction.tif")
+
+plot(RF_prediction, main = "Wetland Probability")
+```
+
+
+We can overlay this onto a mapview map too. 
+```{r fig.align='center'}
+mapview(raster::raster(RF_prediction), map.types = "Esri.WorldImagery", alpha = 0.5)
+```
+
+
+```{r}
+mapview((raster::raster(RF_prediction)) ) + st_as_sf(NWI_training_pts_prj)
+```
+
+
+**`r colorize("QUESTION 12: Play around with your new wetland probability map and take a screenshot of it with a different color scheme than the one shown here using the col.regions argument in the mapview function. Alternatively you can take the raster into ArcGIS and examine it there if you hate R now. Zoom into 1 area you think is interesting based on the model results. Why was this place interesting?",  "red")`**
+
+**`r colorize("QUESTION 13: Similar to the previous question but include a separate plot with NWI wetlands with the model results. Zoom into 1 area that differs between the NWI and the model. Why do you think this place had different predictions from the NWI? Look back at some of the plot code from here or use ArcGIS to make a map",  "red")`**
+
