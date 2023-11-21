@@ -327,7 +327,7 @@ Or tool parameters
 print(wbt_tool_parameters("slope"))
 ```
 
-One thing that is a bit weird with `whitebox` is that the functions require **a file path** but not a variable. So the file path in quotes should go to the file and the output should also be a filepath with a file name.
+One thing that is a bit weird with `whitebox` is that the functions require **a file path** but not a variable. So the file path in quotes should go to the file and the output should also be a file path with a file name.
 
 Here's an example using the `wbt_mean_curvature`
 ```{r eval=FALSE}
