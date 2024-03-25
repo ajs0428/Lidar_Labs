@@ -111,7 +111,7 @@ plot_dtm3d(dtmPMF)
 dtmCSF = rasterize_terrain(________, res=3.28, algorithm = tin())
 plot_dtm3d(dtmCSF)
 
-#We can write the laz file out to our computer if we want to bring it 
+#We can write the laz file out to our computer if we want to bring it d
   # to cloudcompare
 writeLAS(laspmf, file = "Labs/Lab 3/laspmf_test.laz")
 
