@@ -1,0 +1,327 @@
+---
+title: "Lab 1: Welcome to the Lab and Aerial Lidar Basics"
+subtitle: "ESRM433/SEFS533"
+author: "Anthony J Stewart"
+format: 
+    pdf: 
+        toc: true
+        toc-depth: 3
+        colorlinks: true
+    html:
+        toc: true
+        toc-depth: 3
+---
+
+## Welcome to Lab 1 for ESRM433/SEFS533!
+
+We are going to be looking at point clouds from an Aerial Lidar Scanner (ALS). We will be doing basic manipulation of a point cloud and you will be downloading your own small section of an ALS point cloud.
+
+::: {align="center"}
+**When Logging into Madrona, Use SEFS Spatial**
+:::
+
+[For help with Madrona see the SEFS Madrona FAQ](https://sites.uw.edu/sefsit/services/infrastructure/madrona/)
+
+## Part 1: Madrona
+
+**What is Madrona?**
+
+-   Madrona is a virtual desktop environment which gives students, faculty, and staff 24/7 remote access to high-end software previously available only by visiting SEFS computing labs.
+
+**How do I connect?**
+
+-   Most computers within SEFS are already configured to connect you to Madrona. Simply look for the VMware Horizon Client in your Windows Start Menu.
+
+If you want to connect using your personal computer, you can either download and install the free VMware Horizon Client (suggested) or use the HTML-based web client. Both options are readily available by visiting https://madrona.sefs.uw.edu. To install the full client just click the "Install VMware Horizon Client" button on the left and you'll be taken to VMware's site. Once installed, click the + New Server button, enter madrona.sefs.uw.edu then click Connect. When prompted, use your UW NetID credentials to login.
+
+You can also access Madrona by mobile app; the VMware Horizon Client is available for iOS, Android and Windows Mobile.
+
+If you receive a message stating you are "unentitled" or have any other difficulty connecting, please email sefsit\@uw.edu or call (206) 616-7365.
+
+**Can I access Madrona from off-campus?**
+
+-   Yes. Madrona can be accessed from any Internet connected network worldwide using a supported device. Keep in mind internet connection speed will affect the user experience but not the performance of the virtual computer.
+
+**How do I save files on Madrona?**
+
+Students should store documents using UW-IT's U Drive service, or using a UW-provided cloud service such as OneDrive for Business or Google Drive. Students requiring access to a SEFS Faculty network share should contact the appropriate faculty member to request access and set up the necessary permissions.
+
+-   Staff and Faculty may store documents to SEFS networked storage, Main (NETID), depending on the purpose of the document. These drives are backed up by UW-IT, and are available on all SEFS computers joined to the campus NETID domain. If you cannot access permanent storage from Madrona, please e-mail sefsit\@uw.edu or call (206) 616-7365 for assistance. Madrona allows the storage of user profile data (i.e. preferences, desktop, "My Documents" folder), however, this should not be considered permanent storage for documents. Madrona profile data is limited to 5GB, so if you exceed this limit you will receive a warning every 15 minutes to move the excess data to another storage location such as a flash drive, your permanent storage space, or cloud storage space. You may continue to work, however to prevent data loss you will not be able to log out until your profile is within the storage limit.
+
+At the end of each quarter, profiles that have not been accessed in over 1 year will be removed from the system. If you have not stored your files as recommended above, they will be lost.
+
+**SEFS Spatial Vs Students?**
+
+-   There are two options when logging into Madrona. SEFS Spatial or Students. 'SEFS spatial' has more computing and graphics capacity and is what you'll want to be logged into when using any programs that are more computationally demanding or have a large graphics component (i.e. Google Earth Pro and GIS programs). However, the number of people that can be logged onto it at one time is limited.
+
+-   'Students' can handle many more people logging on but can't handle the more demanding programs as well.
+
+
+:::{.callout-note icon=false}
+## QUESTION 1: 
+
+There are two ways you can connect to Madrona from your personal computer,
+what are they? (This isn’t asking about the different server options (i.e. SEFS Spatial or
+Students) but rather making the initial connection)
+:::
+
+:::{.callout-note icon=false}
+## QUESTION 2: 
+
+On public computers and computers in different computer labs across campus,
+what is the web address of the HTML-based web client you can use to log onto Madrona?
+:::
+
+
+:::{.callout-note icon=false}
+
+## QUESTION 3: 
+
+If you need to work on an assignment that uses a program like Google Earth Pro
+or ArcGIS, what option should you pick when logging onto Madrona?
+:::
+
+:::{.callout-note icon=false}
+
+## QUESTION 4: 
+
+TRUE or FALSE. You can store unlimited data on Madrona no problem and you
+never need to delete anything.
+:::
+
+\pagebreak
+
+## Part 2: Intro to lidar files and CloudCompare 
+
+\begin{center}
+
+
+\color{Red}\textbf{FOR ALL LABS, PLEASE CREATE A FOLDER ON YOUR MADRONA DESKTOP TO STORE YOUR DATA}
+
+\end{center}
+
+**Do not store data directly on your C drive.**
+
+Your file path name should be:
+
+-  `//fs-persona.sefs.uw.edu/student_redirect$/*YourNetID*/Desktop/ESRM433/LAB1`
+
+My folder for lab 1 will be located at:
+
+-  `//fs-persona.sefs.uw.edu/student_redirect$/ajs0428/Desktop/ESRM433/LAB1`
+
+This will be fine to work from for Madrona or your own PC (although your user name will likely
+not be your NETID…).
+
+### CloudCompare
+
+There are many programs available to visualize and manipulate lidar data. For the majority of this
+class we will be using R coding software, but for this lab we are going to be using the program
+`CloudCompare` to do basic visualization and manipulation of Airborne Laser Scanner (ALS) point
+clouds.
+
+### Lidar files
+
+There are many formats that lidar files can come in. Lidar data was initially only available in ASCII files (i.e. .txt, .csv, .xyz, etc.) but more recently a switch to a binary file format has taken place and the most common file types for lidar data are .las or .laz. There are several other file types that lidar can come in, but a full discussion is beyond the scope of this lab. Ultimately you need to understand that lidar data comes in many formats and there isn’t one singular suffix that will identify all lidar data. The binary format of .las is much more efficient for the huge files that lidar can create, but having lidar data in an ASCII format (i.e. .csv) allows for the manual inspection of the data in widely available programs such as Excel.
+
+
+Within the .las format for lidar data, information about the x, y, z location of each point is present along with information about the intensity of the pulse return, the classification of the return (this can be extremely useful as .las data often has the lowest returns classified as "ground"), the GPS time of the return, and several other fields that provide important information. You can identify the flight lines of the plane by looking at either the Point Source ID or the GPS time. The flight lines of the plane will have different Point Source IDs and will have been flown at different times so you can get a good idea of the path of the plane. The Scan Angle rank is also related to the flight path as the angle increases the further from the planes nadir the point it.
+
+:::{.callout-tip}
+Keep in mind that many .las files have tens of millions of points so even in a binary format, the size of the files can be massive!
+:::
+
+![Common fields present in a .las file](pics/las_file_pic.jpg){width=80%}
+
+
+
+
+
+### STEP 1
+
+Download the sample ALS point clouds from canvas. Unzip the folder and put it in your LAB1 folder
+inside your ESRM433 folder on your Madrona Desktop. Within the zip file there are examples of 4
+different land cover types. You can refer to the photos below to see the areas the point clouds were
+clipped from.
+
+![A forested area](LAB1/forest.PNG){width=75%}
+
+![A bare area with little vegeation](LAB1/bare.PNG){width=75%}
+
+![A forested area with steep slopes and river](LAB1/river.PNG){width=75%}
+
+![A forested area with dead trees](LAB1/dead.PNG){width=75%}
+
+### STEP 2
+
+Open the program CloudCompare. You should see a big blue blank space on the screen. We'll familiarize ourselves with this program as we go.
+
+We are going to import the `river.las` file. In the upper left hand corner of CloudCompare go to `File>Open` then point to the `river.las` file. When opening a `.las` file, CloudCompare wants to know what fields are present. All of the boxes should be checked. You should recognize the names of the standard fields. \textcolor{ForestGreen}{Click "Apply all"}
+
+![Open LAS file window](pics/open_las.jpg){width=50%}
+
+
+
+A new box should pop up "Global shift/scale". These .las files are saved with a UTM coordinate system that georeferences them accurately in the world. Unfortunately, CloudCompare can’t handle such large values so it is asking to perform a simple transformation on the X & Y locations of the points. Click  \textcolor{ForestGreen}{"Yes to All"}
+
+![Open LAS file window](pics/globalshift.jpg){width=70%}
+
+Hopefully this is what you are looking at!
+
+![Looking from above at the river point cloud](pics/river_ptcloud.jpg){width=75%}
+
+
+### STEP 3
+
+Let’s look at the different ways to colorize the points. 
+
+**With the river cloud highlighted in the DB Tree on the left side of the screen**, the properties of the point cloud are presented below it. The properties contains information about the dimensions of the point cloud, how many points are in the cloud, the number of scalar fields and their names, and what color scheme is currently being used. **The Scalar Fields** is what we are interested in now. These Scalar Fields are all the information besides the XYZ point coordinates that are contained within the `.las` file. The "active" drop down menu is what CloudCompare is using to assign colors to the point cloud. CloudCompare defaults to coloring the points by the PointSourceId upon importation but check out what happens to the colors when you select the other fields.
+
+![The DB Tree window](pics/dbtree.jpg){width=75%}
+
+:::{.callout-note icon=false}
+## QUESTION 5: 
+
+How many points are in the river point cloud?
+:::
+
+:::{.callout-note icon=false}
+## QUESTION 6: 
+
+When you import the image, it defaults to coloring the scan by the PointSourceId. This results in bands of color in the image. If a larger scale image, then these bands would almost appear as stripes. If you color the points by GPSTime, the colors may change, but the "stripes" are still present. What causes these stripes?
+:::
+
+### STEP 4
+
+Other ways of coloring the point cloud are based on the relative height of the point in the cloud or you can color the entire cloud the same color if you are comparing multiple clouds together
+and you want each individual cloud colored a different color. Let’s color the points based on their relative height. Once again, make sure that the “river – cloud” is highlighted in the DB Tree on the left side of the screen and then select \textcolor{ForestGreen}{EDIT>COLORS>HEIGHT RAMP} Leave the Default button selected and hit OK
+
+![Height ramp location in toolbar](pics/heightramp_tools.jpg){width=60%}
+
+
+![This is the cloud colored by relative height.](pics/heightramp.jpg){width=75%}
+
+
+Take a moment and colorize the cloud as a single color and see what looks best.
+
+
+### STEP 5
+
+Other ways to improve your visualizations are by increasing your point size and turning on shaders. To increase point size, just hover your mouse in the upper left hand corner of your visualization window. Make sure that the river - Cloud is highlighted in the DB Tree and see what happens when you increase the point size. 
+
+![](pics/pointsize.jpg){width=40%}
+
+
+Next try out the shaders. They are located in \textcolor{ForestGreen}{DISPLAY>SHADERS AND FILTERS>EDL SHADER} There is also a button for the shaders on the right hand toolbar. See what results you can get for visualizing the point cloud.
+
+![Shaded and larger points](pics/shadedptcloud.jpg){width=75%}
+
+Take some time and familiarize yourself with these other tools in CloudCompare. The top option lets you switch from a perspective view to an orthographic view. The magnifying glass will allow you to zoom to the highlighted cloud, this can be very helpful if you get lost in the view window space or you have multiple clouds rendered that are not next to each other. The set of boxes will bring you to predefined views of the point cloud. Go ahead and import the other three .las files and compare them to the aerial photo of the same location.
+
+:::{.callout-note icon=false}
+## QUESTION 7: 
+
+Submit a screenshot of one of the other point clouds (so don’t submit a screenshot of river.las) rendered in a cool way.
+:::
+
+### STEP 6
+
+The last task we will have in CloudCompare is to output a Digital Surface Model of a point cloud. This
+will be a raster image of all of the highest points in a cloud. It is similar to a Digital Terrain Model (DTM) but instead of the ground, we are mapping the tops of trees. Once again, make sure your point cloud is highlighted in the DB Tree menu. We want \textcolor{ForestGreen}{TOOLS>PROJECTION>RASTERIZE}
+
+![Rasterize tool location](pics/rasterizetool.jpg){width=40%}
+
+This tool allows for the creation of all manner of rasters that represent the point cloud data. You are able to create DSMs, DTMs, Hillshades, Contour Plots, and estimate volumes within this tool. Covering all the uses of this tool and CloudCompare in general is beyond the scope of this lab but what is important, is to get a sense of how rasters are made from point clouds. The GeoTifs created here can be imported into GIS software like ArcMap or QGIS. They can also be used for raster analysis inside statistical software like R.
+
+When you launch the tool, you first have to define the Grid step. This defines the resolution of the
+raster. The grid units match the units of the point cloud. Leave the step at 1 and hit the red button
+“Update grid”. If you have a fine grain size (small pixel size), there may be cells with no information so you have to decide if you will fill those cells, or leave them empty. If you fill the empty cells, what will you fill them with? The minimum values, the maximum values, or perhaps try to interpolate the missing values based on the nearest cells that do have a value. Enter different values and update the grid to see how the results differ.
+
+![The open rasterize tool](pics/rasterizetool_open.jpg){width=90%}
+
+:::{.callout-note icon=false}
+## QUESTION 8: 
+
+Submit a screenshot of a new point cloud (so don’t submit a screenshot of river.las or of the point cloud used in question 6) inside the tool window with an updated grid. Don’t submit the geotif, just a screen shot like the one here. Briefly justify your Grid step size, and what you did with the empty cells (i.e. min, max, average, interpolate). Make sure your Projection direction is set to Z.
+:::
+
+\pagebreak
+
+## PART 3: Obtaining Lidar Data
+
+This last part, you are going to download an ALS point cloud, clip out a portion of it, and render it in a cool way and submit it.
+
+### STEP 1
+
+Go to the Washington State Lidar Portal http://lidarportal.dnr.wa.gov/ You can download any of the
+publicly available ALS data for Washington state here. Take a minute to look around the site. All of
+the available ALS data is listed in the menu on the left and you can toggle off and on the DSM, or
+DTM for each acquisition. 
+
+![WA DNR Lidar Portal](pics/walidarportal.jpg)
+
+You can select an area for lidar data with the button, or you can
+select a single point with the button. Once you’ve familiarized yourself with the site, I would suggest “Hide All” of the DTMs because we are going to select a single point to look for lidar data.
+
+
+### STEP 2
+
+Drop a pen on Blodel hall. We are only interested in
+the lidar data in this exact spot. There are three different acquisitions at this point. *King 2003, King County 2016, and Puget Lowlands 2005*. Uncheck everything other than the point cloud. 
+
+\colorbox{Red}{\color{white}Be very aware of what you download, where you download it to, and the size of the download.} 
+
+Downloading only the point cloud of this section of the King County 2016 data is 121.82MB which is rather large, but we will try to get it. Once it is downloaded, unzip it, and open the folders until you get to the .laz file. You can either just drag and drop the .laz file into CloudCompare or you can open the file through the CloudCompare menu.
+
+![The point cloud over UW colored by the PointSourceID (left) and intensity (right)](pics/uwptcloud.jpg)
+
+The first thing you are likely to notice are the stripes! Also note the weird hole in the data. Change the active scalar field to intensity and the lidar point cloud almost looks like an aerial photo. That weird hole becomes obvious that it is Drumheller Fountain. This is a great example of how lidar and water don’t mix as most lidar uses laser light in the NIR spectrum that is almost fully absorbed by water.
+
+:::{.callout-note icon=false}
+## QUESTION 9: 
+
+Why does the point cloud colored by intensity resemble a black and white
+photo?
+:::
+
+### STEP 3
+
+There are several ways to subsample a point cloud. The segmentation tool is the most common but it
+can be slow when dealing with a larger data set. A less computationally demanding tool is “crop”. We
+don’t need a high level of precision for this job so we are going to identify the center point of an area
+we want, and then crop a 500-meter box around that point. To get information about a specific point,
+you can use the point picking tool.
+
+\textcolor{ForestGreen}{TOOLS>POINT PICKING} or the icon:
+
+![Point picking icon](pics/pointpick.jpg){width=25%}
+
+Picking a point in the SEFS courtyard we get an X coordinate of approximately 94907 and a Y coordinate of approximately 50542.
+
+![Example point near Bloedel and Anderson Hall](pics/cropandpointpick.jpg){width=75%}
+
+The crop tool is \textcolor{ForestGreen}{EDIT>CROP}. Once again, you have to make sure your point cloud is highlighted in the DB Tree menu. In the Crop menu, enter your approximate X & Y coordinates, don’t worry about Z, and the size of your sample you want.
+
+![The crop tool dimensions](pics/croptooldims.jpg){width=50%}
+
+Your downloaded point cloud should now be divided into two separate clouds. A cloud.remaining and a cloud.segmented. Unclick the cloud.remaining and use your knowledge of point cloud rendering to make SEFS look awesome!
+
+![Cropped point clouds with updated point visualization](pics/croppedptclouds.jpg){width=75%}
+
+:::{.callout-note icon=false}
+## QUESTION 10: 
+
+Include a ScreenShot of your final image. Include the name of the DataSet, how
+many points were in the original data set and how many points were in the cropped section.
+:::
+
+:::{.callout-note icon=false}
+## Bonus! 
+
+Download a point cloud of a different area and post a screen
+shot onto the lab discussion board on canvas. Perhaps a mountain top or hunk of
+primordial forest or an iconic building? Describe the area and location. Provide the
+coordinates of the area. (lat/long or utm or state plane are all fine, just specify which it
+is).
+
+:::
