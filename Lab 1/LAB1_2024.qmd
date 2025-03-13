@@ -188,7 +188,7 @@ How many points are in the river point cloud?
 :::{.callout-note icon=false}
 ## QUESTION 6: 
 
-When you import the image, it defaults to coloring the scan by the PointSourceId. This results in bands of color in the image. If a larger scale image, then these bands would almost appear as stripes. If you color the points by GPSTime, the colors may change, but the "stripes" are still present. What causes these stripes?
+When you import the image, it defaults to coloring the scan by the PointSourceId. This results in bands of color in the image. If you color the points by GPSTime, the colors may change, but the "stripes" are still present. What causes these stripes?
 :::
 
 ### STEP 4
@@ -318,10 +318,13 @@ many points were in the original data set and how many points were in the croppe
 :::{.callout-note icon=false}
 ## Bonus! 
 
-Download a point cloud of a different area and post a screen
-shot onto the lab discussion board on canvas. Perhaps a mountain top or hunk of
-primordial forest or an iconic building? Describe the area and location. Provide the
-coordinates of the area. (lat/long or utm or state plane are all fine, just specify which it
-is).
+Download a point cloud of a different area and post a screen shot onto the [Lab 1 questions discussion board on canvas](https://canvas.uw.edu/courses/1719235/discussion_topics/8784811). Perhaps a mountain top or hunk of primordial forest or an iconic building? Describe the area and location. Provide the coordinates of the area. (lat/long or utm or state plane are all fine, just specify which it is).
+
+:::
+
+:::{.callout-note icon=false}
+## Graduate Students 
+
+Graduate Students Download a point cloud of a different area and post a screen shot onto the [Lab 1 Grad Student discussion board on canvas](https://canvas.uw.edu/courses/1719235/discussion_topics/8784810). Perhaps a mountain top or hunk of primordial forest or an iconic building? Describe the area and location. Provide the coordinates of the area. (lat/long or utm or state plane are all fine, just specify which it is).
 
 :::

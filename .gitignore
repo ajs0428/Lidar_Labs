@@ -1,21 +1,5 @@
-/*
-!.gitignore
-!Lab\ 1
-Lab\ 1/*GradingRubric.docx
-Lab\ 1/*.pptx
-Lab\ 1/pre2024
-
-!/Lab\ 2/
-/Lab\ 2/*GradingRubric.docx
-/Lab\ 2/*.laz
-/Lab\ 2/*.mp4
-
-!Lab\ 3/
-Lab\ 3/Pre2023
-Lab\ 3/ONPlidar
-Lab\ 3/*.DS_Store
-Lab\ 3/*.laz
-Lab\ 3/*.pptx
-Lab\ 3/*.zip
-Lab\ 3/*.mp4
-Lab\ 3/LAB3data/
+*
+!**/*.R
+!**/*.qmd
+!**/*.rmd
+!**/*.pdf
