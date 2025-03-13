@@ -3,3 +3,5 @@
 !**/*.qmd
 !**/*.rmd
 !**/*.pdf
+*answers*
+*Answers*
